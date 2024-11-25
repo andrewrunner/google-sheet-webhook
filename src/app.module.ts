@@ -10,7 +10,7 @@ import { NotifyEmailModule } from './notify-email/notify-email.module';
     ConfigModule.forRoot({ isGlobal:true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync(getTypeORMConfig()),
 
-    RowsModule, NotifyEmailModule,
+    NotifyEmailModule, RowsModule, 
   ]
 })
 export class AppModule {}

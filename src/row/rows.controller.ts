@@ -48,51 +48,47 @@ export class RowsController {
 
 
     const rowsCount = await this.rowsRepository.count();
-    const isMultipleOf10 = (rowsCount % 10) === 0;
+    if((rowsCount % 10) !== 0) 
+      return;
+    
+    const lastTenRows = await this.rowsRepository.find({
+      order: {
+        id: "DESC", 
+      },
+      take: 10, 
+    });
 
-    if(isMultipleOf10) {
-        const notifyEmails = await this.notifyEmailRepository.getEmails();
+    const notifyEmails = await this.notifyEmailRepository.getEmails();
 
 
-        const emailApiKey = this.configService.get('SENDGRID_API_KEY');
-        const emailFrom =  this.configService.get('SENDGRID_EMAIL_FROM');
 
-        sgMail.setApiKey(emailApiKey);
 
-        const lastTenRows = await this.rowsRepository.find({
-            order: {
-              id: "DESC", 
-            },
-            take: 10, 
+    const emailApiKey = this.configService.get('SENDGRID_API_KEY');
+    const emailFrom =  this.configService.get('SENDGRID_EMAIL_FROM');
+
+    let message = "";
+    for(const row of lastTenRows) {
+      const dateTimeStr = (new Date(row.timestamp)).toLocaleString();
+        message += `${dateTimeStr} \t ${row.orderId} \t ${row.customer} \t ${row.orderDate} \t ${row.status} <br/>`
+    }
+
+    sgMail.setApiKey(emailApiKey);
+
+    for(const item of notifyEmails) {
+        try {
+          await sgMail.send({
+            to: item.email,
+            from: emailFrom, 
+            subject: 'Останні 10 строчок з історії',
+            html:message,
           });
-          
-        let message = "";
 
-        for(let row of lastTenRows) {
-            message += `${row.timestamp} ${row.orderId} ${row.customer} ${row.orderDate} ${row.status} <br/>`
-        }
-
-
-
-        for(let item of notifyEmails) {
-
-            const msg = {
-                to: item.email,
-                from: emailFrom, 
-                subject: 'Test message',
-                html:message,
-            }
-
-         sgMail
-                .send(msg)
-                .then(() => {
-                  console.log('Email sent')
-                })
-                .catch((error) => {
-                  console.error(error)
-                })
+          console.log(`${item.email} have been notificated`)
+        } catch(e) {
+          console.error(e)
         }
     }
+
   }
 
 }
